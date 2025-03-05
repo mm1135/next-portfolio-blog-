@@ -11,17 +11,39 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Tag, ArrowLeft, Home } from "lucide-react";
+import { Metadata } from 'next';
 
-// ページのルートパラメータを受け取る
-export default async function PostPage({ params }: { params: { id: string } }) {
-  // Next.js 14以降では、paramsオブジェクトを使う前にawaitする必要がある
-  const resolvedParams = await Promise.resolve(params);
+// Next.js 15用にProps型を修正 - paramsはPromise型
+type Props = {
+  params: Promise<{ id: string }>;
+};
+
+// generateMetadata関数の修正
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  // Promiseとして提供されるparamsを解決
+  const resolvedParams = await params;
   const postId = parseInt(resolvedParams.id);
-  
-  // 数値IDで記事を取得
   const post = await getPostById(postId);
   
-  // 記事が見つからない場合は404ページを表示
+  if (!post) {
+    return {
+      title: '記事が見つかりません',
+    };
+  }
+  
+  return {
+    title: post.title,
+    description: post.content.substring(0, 160),
+  };
+}
+
+// コンポーネント内でもparamsをawaitで解決する
+export default async function PostPage({ params }: Props) {
+  // Promiseとして提供されるparamsを解決
+  const resolvedParams = await params;
+  const postId = parseInt(resolvedParams.id);
+  const post = await getPostById(postId);
+  
   if (!post) {
     notFound();
   }

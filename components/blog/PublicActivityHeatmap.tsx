@@ -7,6 +7,19 @@ export default function PublicActivityHeatmap() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
+    const formatDateInEffect = (dateString: string) => {
+      if (!dateString) return '';
+      
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      
+      const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+      
+      return `${year}年${month}月${day}日(${dayOfWeek})`;
+    };
+
     const fetchActivities = async () => {
       setLoading(true);
       const today = new Date();
@@ -27,7 +40,7 @@ export default function PublicActivityHeatmap() {
         
         // 日付ごとの活動数をカウント
         const activityByDate: {[key: string]: number} = {};
-        activities.forEach((activity: any) => {
+        activities.forEach((activity: { created_at: string, id?: string | number }) => {
           // タイムゾーンを考慮した日付変換 (JSTに変換)
           const date = new Date(activity.created_at);
           const jstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000)); // UTC+9時間（日本時間）
@@ -44,7 +57,7 @@ export default function PublicActivityHeatmap() {
         
         // 日付のフォーマットをテスト
         const testDate = new Date();
-        console.log('Format test:', formatDate(testDate.toISOString().split('T')[0]));
+        console.log('Format test:', formatDateInEffect(testDate.toISOString().split('T')[0]));
       } catch (error) {
         console.error('活動データの取得に失敗:', error);
       } finally {

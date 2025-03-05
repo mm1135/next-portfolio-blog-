@@ -3,23 +3,30 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { Components } from 'react-markdown';
 
+// react-markdown互換の型定義を使用
 interface MarkdownRendererProps {
   content: string;
 }
 
+// 自前でコンポーネントのprops型を定義
+interface ComponentProps {
+  children?: React.ReactNode;
+  className?: string;
+  href?: string;
+}
+
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
-  const customComponents: Partial<Components> = {
+  const customComponents = {
     // div要素として直接スタイルを適用
-    div: ({ children }) => (
+    div: ({ children }: ComponentProps) => (
       <div className="prose prose-stone dark:prose-invert max-w-none">
         {children}
       </div>
     ),
     
     // リンクのカスタマイズ
-    a: ({ href, children }) => {
+    a: ({ href, children }: ComponentProps) => {
       const isExternal = href?.startsWith('http');
       return (
         <a 
@@ -34,8 +41,11 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
     },
     
     // コードブロックのカスタマイズ
-    code: ({ inline, className, children, ...props }) => {
-      if (inline) {
+    code: ({ className, children, ...props }: ComponentProps) => {
+      // インラインコードかどうかをクラス名で判断
+      const isInline = !className;
+      
+      if (isInline) {
         return (
           <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props}>
             {children}

@@ -1,5 +1,5 @@
 import { createServerComponentClient as createComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { CookieOptions } from '@supabase/auth-helpers-shared';
+import { createClient } from '@supabase/supabase-js';
 
 // App Router (app/ ディレクトリ)用
 export async function createAppRouterSupabaseClient() {
@@ -12,20 +12,24 @@ export async function createAppRouterSupabaseClient() {
 }
 
 // Pages Router (pages/ ディレクトリ)用
-export function createPagesRouterSupabaseClient(cookieValue?: {[key: string]: string}) {
+export function createPagesRouterSupabaseClient() {
   // このバージョンはGETリクエスト時に使用する
-  return createComponentClient({ 
-    cookieOptions: {
-      name: "supabase-auth-token",
-      get: () => cookieValue ? JSON.stringify(cookieValue) : null,
-      set: () => {},
-      remove: () => {}
-    } as CookieOptions
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  
+  // 代わりに直接createClientを使用
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      // cookieを手動で設定する代わりにセッションをメモリに保持
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
   });
 }
 
 // 環境を検出して適切なクライアントを提供
-export async function createServerSupabaseClient(cookieValue?: {[key: string]: string}) {
+export async function createServerSupabaseClient() {
   if (typeof window !== 'undefined') {
     throw new Error('このメソッドはサーバーサイドでのみ使用できます');
   }
@@ -33,9 +37,8 @@ export async function createServerSupabaseClient(cookieValue?: {[key: string]: s
   try {
     // App Router環境で実行を試みる
     return await createAppRouterSupabaseClient();
-  } catch (error) {
-    // App Router環境でなければPages Router用のクライアントを返す
-    return createPagesRouterSupabaseClient(cookieValue);
+  } catch {
+    return createPagesRouterSupabaseClient();
   }
 }
 

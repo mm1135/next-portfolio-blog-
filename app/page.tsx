@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowRight, Mail, User } from 'lucide-react';
 import TechIcon from '@/components/common/TechIcon';
 import { getRecentPosts } from '@/lib/posts';

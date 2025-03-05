@@ -1,14 +1,15 @@
+import React from 'react';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { getAllPosts, Post } from "@/lib/posts";
+import { getAllPosts } from "@/lib/posts";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Tag, ArrowRight } from "lucide-react";
 
 // このページはサーバーコンポーネントですので、クライアントに送信されるJSは最小限
 export default async function PostsPage() {
-  // Supabaseから記事データを取得
-  const posts = await getAllPosts();
+  // false を明示的に渡して、公開済み記事のみを取得
+  const posts = await getAllPosts(false);
   
   return (
     <div className="container mx-auto py-12 px-4">

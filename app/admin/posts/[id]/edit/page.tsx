@@ -89,10 +89,7 @@ export default function EditPostPage({ params }: EditPostPageProps) {
 
       if (result) {
         // 活動記録を保存
-        await recordPostActivity(
-          postId, 
-          formData.published ? 'publish' : 'edit'
-        );
+        await recordPostActivity(postId);
         
         router.push('/admin');
       } else {

@@ -27,6 +27,7 @@ export default function NewPostPage() {
   useEffect(() => {
     const checkQiitaConnection = async () => {
       const credentials = await getQiitaCredentialsClient();
+      console.log('Qiita接続状態:', !!credentials);
       setQiitaConnected(!!credentials);
     };
     
@@ -49,54 +50,56 @@ export default function NewPostPage() {
     setError('');
 
     try {
-      // タグを配列に変換
-      const tagsArray = formData.tags
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag.length > 0);
+      if (!formData.title || !formData.content) {
+        throw new Error('タイトルと本文は必須です');
+      }
 
-      // ブログに投稿
-      const postResult = await createPost({
-        title: formData.title,
-        content: formData.content,
-        slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-'),
-        tags: tagsArray,
-        published: formData.published
+      // APIルートを使用してサーバーサイドで投稿
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
-
-      if (!postResult || !postResult.success) {
-        throw new Error('記事の保存に失敗しました');
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || '投稿処理に失敗しました');
       }
       
-      // 活動記録を保存
-      if (postResult.id) {
-        await recordPostActivity(
-          postResult.id, 
-          formData.published ? 'publish' : 'create'
-        );
-      }
-
-      // Qitaにも投稿する場合
+      console.log('投稿成功:', result.id);
+      
+      // Qiitaにも投稿する（チェックボックスが有効な場合）
       if (qiitaEnabled && qiitaConnected) {
-        const qiitaResult = await postToQiita(
-          formData.title,
-          formData.content,
-          tagsArray
-        );
-        
-        if (!qiitaResult.success) {
-          console.error('Qiita投稿エラー:', qiitaResult.error || '不明なエラー');
-          // エラーがあってもブログには投稿できているので続行
-        } else {
-          console.log('Qiitaに投稿成功:', qiitaResult.url);
-          // Qiita URLを保存する処理をここに追加
+        try {
+          console.log('Qiita投稿開始...');
+          const tagsArray = formData.tags
+            ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+            : [];
+          
+          const qiitaResult = await postToQiita(
+            formData.title,
+            formData.content,
+            tagsArray
+          );
+          
+          if (qiitaResult.success) {
+            console.log('Qiitaにも投稿しました:', qiitaResult.url);
+          } else {
+            console.error('Qiita投稿エラー:', qiitaResult.error);
+          }
+        } catch (qiitaError) {
+          console.error('Qiita投稿処理エラー:', qiitaError);
+          // Qiita投稿エラーはブログ投稿には影響しない
         }
       }
-
+      
       router.push('/admin');
     } catch (err) {
-      console.error('投稿エラー:', err);
-      setError('記事の保存中にエラーが発生しました');
+      console.error('エラー:', err);
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
     } finally {
       setIsSubmitting(false);
     }
@@ -180,30 +183,33 @@ export default function NewPostPage() {
             />
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center space-x-2">
             <input
               type="checkbox"
               id="published"
               name="published"
               checked={formData.published}
               onChange={handleCheckboxChange}
-              className="mr-2"
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <label htmlFor="published">公開する</label>
+            <label htmlFor="published" className="text-sm font-medium">
+              公開する（チェックを外すと下書きとして保存されます）
+            </label>
           </div>
 
-          {/* Qita投稿オプション */}
           {qiitaConnected && (
-            <div className="flex items-center">
+            <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 id="qiitaEnabled"
+                name="qiitaEnabled"
                 checked={qiitaEnabled}
                 onChange={(e) => setQiitaEnabled(e.target.checked)}
-                className="mr-2"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                disabled={!qiitaConnected}
               />
-              <label htmlFor="qiitaEnabled">
-                Qitaにも同時投稿する
+              <label htmlFor="qiitaEnabled" className="text-sm font-medium">
+                Qiitaにも同時投稿する（公開設定時のみ有効）
               </label>
             </div>
           )}

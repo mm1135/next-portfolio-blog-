@@ -2,8 +2,7 @@
 
 import { ReactNode } from 'react';
 import { 
-  Code, Server, Database, Cloud, 
-  GitBranch, Layers, LayoutGrid, FileJson
+  Code, Server, Database, Cloud, Layers, LayoutGrid, FileJson
 } from 'lucide-react';
 
 // アイコンマッピング - すでにインストール済みのlucide-reactを使用

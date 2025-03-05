@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import Image from 'next/image';
+// Imageはimgタグを使うため削除
+// import Image from 'next/image';
 
 interface ProfileImageProps {
   src?: string;

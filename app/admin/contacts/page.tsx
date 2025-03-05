@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
@@ -22,20 +22,7 @@ export default function AdminContactsPage() {
   const supabase = useSupabaseClient();
   const router = useRouter();
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        router.replace('/admin/login');
-      } else {
-        fetchContacts();
-      }
-    };
-    
-    checkSession();
-  }, [supabase, router]);
-
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('contacts')
@@ -48,7 +35,20 @@ export default function AdminContactsPage() {
       setContacts(data || []);
     }
     setLoading(false);
-  };
+  }, [supabase]);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        router.replace('/admin/login');
+      } else {
+        fetchContacts();
+      }
+    };
+    
+    checkSession();
+  }, [supabase, router, fetchContacts]);
 
   const markAsRead = async (id: string) => {
     const { error } = await supabase

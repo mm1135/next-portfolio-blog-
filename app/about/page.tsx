@@ -1,7 +1,7 @@
 import ActivityHeatmap from '@/components/common/ActivityHeatmap';
 import ProfileImage from '@/components/common/ProfileImage';
 import Link from 'next/link';
-import { Code, Server, Layout, Database, Cpu, Globe, ArrowRight } from 'lucide-react';
+import { Code, Server, Database, Globe } from 'lucide-react';
 
 export default function AboutPage() {
   return (

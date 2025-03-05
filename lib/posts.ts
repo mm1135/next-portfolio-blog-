@@ -4,10 +4,6 @@ import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 // import { cookies } from "next/headers";
 import { Post as PostType } from '@/types/post';
 
-
-// 環境によってインポートを分離するためのフラグ
-const isAppRouter = process.env.NEXT_RUNTIME === 'nodejs';
-
 // PostDBType を使用して既存の関数を動作させる
 // PostType を使用して新しい関数を実装する
 
@@ -22,14 +18,14 @@ export type Post = {
   tags: string[];
 };
 
-// 全記事を取得 (管理者向け - 下書きも含む)
-export async function getAllPosts(includeUnpublished = false): Promise<Post[]> {
+// 全記事を取得 (管理者向け - includeUnpublishedがtrueなら下書きも含む)
+export async function getAllPosts(includeUnpublished = true): Promise<Post[]> {
   const query = supabase
     .from('posts')
     .select('*')
     .order('created_at', { ascending: false });
     
-  // 公開済みのみにフィルタリングするかどうか
+  // 管理画面では常に下書きも表示する
   if (!includeUnpublished) {
     query.eq('published', true);
   }
@@ -101,37 +97,85 @@ type CreatePostResult = {
   id?: number;
 };
 
-// createPost関数を修正
+// 新規投稿を作成 - 根本的修正版
 export async function createPost(postData: {
   title: string;
   content: string;
   slug: string;
-  tags: string[];
+  tags: string;
   published: boolean;
-}): Promise<CreatePostResult> {
-  const { data, error } = await supabase
-    .from('posts')
-    .insert([
-      {
-        title: postData.title,
-        content: postData.content,
-        slug: postData.slug,
-        tags: postData.tags,
-        published: postData.published
-      }
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error creating post:', error);
-    return { success: false };
-  }
+}): Promise<number | null> {
+  console.log('Supabaseクライアント:', supabase);
   
-  return { 
-    success: true,
-    id: data.id
-  };
+  try {
+    // より単純なデータ構造で試す
+    const simpleData = {
+      title: postData.title,
+      content: postData.content,
+      slug: postData.slug || generateSlug(postData.title),
+      published: postData.published,
+      // 単純な文字列として保存（配列変換を避ける）
+      tags: postData.tags ? postData.tags.split(',').map(t => t.trim()).join(',') : ''
+    };
+    
+    console.log('シンプル挿入データ:', simpleData);
+    
+    // 挿入のみを試す
+    const insertResult = await supabase
+      .from('posts')
+      .insert(simpleData);
+      
+    console.log('挿入結果:', insertResult);
+    
+    if (insertResult.error) {
+      console.error('挿入エラー:', insertResult.error);
+      return null;
+    }
+    
+    // 挿入成功後に最新の投稿を取得
+    const { data: latestPost } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('title', postData.title)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+      
+    if (!latestPost) {
+      console.error('投稿はされたが、IDを取得できませんでした');
+      return null;
+    }
+    
+    const postId = latestPost.id;
+    console.log('投稿成功、ID:', postId);
+    
+    return postId;
+  } catch (e) {
+    console.error('投稿中の例外:', e);
+    return null;
+  }
+}
+
+// 投稿用のスラグを生成
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+// 投稿活動を記録
+export async function recordPostActivity(postId: number): Promise<void> {
+  try {
+    await supabase
+      .from('post_activities')
+      .insert({
+        post_id: postId,
+        activity_type: 'publish'
+      });
+  } catch (error) {
+    console.error('活動記録エラー:', error);
+  }
 }
 
 // 記事を更新
@@ -174,7 +218,7 @@ async function getSupabaseServerClient() {
       const { createServerComponentClient } = await import('@supabase/auth-helpers-nextjs');
       const { cookies } = await import('next/headers');
       return createServerComponentClient({ cookies });
-    } catch (error) {
+    } catch {
       // Pages Router用のフォールバック
       console.warn('Server component client failed, falling back to default client');
       return supabase;
@@ -192,24 +236,6 @@ interface PostActivity {
   activity_type: 'create' | 'edit' | 'publish';
   created_at: string;
   user_id: string;
-}
-
-// 活動記録を保存する関数
-export async function recordPostActivity(postId: number, activityType: 'create' | 'edit' | 'publish'): Promise<void> {
-  try {
-    const client = await getSupabaseServerClient();
-    const sessionResult = await client.auth.getSession();
-    const session = sessionResult.data.session;
-    
-    await client.from('post_activities').insert({
-      post_id: postId,
-      activity_type: activityType,
-      user_id: session?.user?.id || 'anonymous',
-      created_at: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Failed to record activity:', error);
-  }
 }
 
 // 特定期間の活動データを取得する関数
@@ -246,7 +272,7 @@ export async function getRecentPosts(limit = 3): Promise<PostType[]> {
         supabaseClient = createServerComponentClient({ 
           cookies: () => cookieStore 
         });
-      } catch (error) {
+      } catch {
         // Pages Router環境の場合はフォールバック
         console.warn('Using default supabase client');
         supabaseClient = supabase;

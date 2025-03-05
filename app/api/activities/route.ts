@@ -49,8 +49,6 @@ export async function GET(request: Request) {
       );
     }
     
-    console.log(`公開記事数: ${data?.length || 0}`);
-    
     // 存在するカラムのみを使用
     const activities = data?.map(post => ({
       id: post.id,

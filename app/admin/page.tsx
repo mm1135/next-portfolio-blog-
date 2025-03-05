@@ -87,36 +87,86 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6">
-        {posts.length === 0 ? (
-          <p>投稿がありません。新しい記事を作成してみましょう。</p>
-        ) : (
-          posts.map((post) => (
-            <div key={post.id} className="border p-6 rounded-lg shadow-sm flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-semibold">{post.title}</h2>
-                <p className="text-gray-500 text-sm mt-1">
-                  {new Date(post.created_at).toLocaleDateString('ja-JP')}
-                  {!post.published && <span className="ml-2 bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">下書き</span>}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/posts/${post.id}/edit`}>編集</Link>
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  disabled={deleting === post.id}
-                  onClick={() => handleDelete(post.id)}
-                >
-                  {deleting === post.id ? "削除中..." : "削除"}
-                </Button>
-              </div>
+      {posts.length === 0 ? (
+        <p>投稿がありません。新しい記事を作成してみましょう。</p>
+      ) : (
+        <>
+          {/* 公開済み記事 */}
+          <h2 className="text-xl font-semibold mt-6 mb-3">公開済み記事</h2>
+          {posts.filter(post => post.published).length === 0 ? (
+            <p className="text-gray-500 italic">公開済みの記事はありません</p>
+          ) : (
+            <div className="grid gap-4 mb-8">
+              {posts
+                .filter(post => post.published)
+                .map((post) => (
+                  <div key={post.id} className="border p-5 rounded-lg shadow-sm flex justify-between items-center">
+                    <div>
+                      <h2 className="text-xl font-semibold">{post.title}</h2>
+                      <p className="text-gray-500 text-sm mt-1">
+                        {new Date(post.created_at).toLocaleDateString('ja-JP')}
+                        <span className="ml-2 bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">公開中</span>
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/admin/posts/${post.id}/edit`}>編集</Link>
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/blog/${post.slug}`} target="_blank">閲覧</Link>
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        disabled={deleting === post.id}
+                        onClick={() => handleDelete(post.id)}
+                      >
+                        {deleting === post.id ? "削除中..." : "削除"}
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              }
             </div>
-          ))
-        )}
-      </div>
+          )}
+
+          {/* 下書き記事 */}
+          <h2 className="text-xl font-semibold mt-6 mb-3">下書き</h2>
+          {posts.filter(post => !post.published).length === 0 ? (
+            <p className="text-gray-500 italic">下書きはありません</p>
+          ) : (
+            <div className="grid gap-4">
+              {posts
+                .filter(post => !post.published)
+                .map((post) => (
+                  <div key={post.id} className="border border-dashed p-5 rounded-lg bg-gray-50 flex justify-between items-center">
+                    <div>
+                      <h2 className="text-xl font-semibold">{post.title}</h2>
+                      <p className="text-gray-500 text-sm mt-1">
+                        {new Date(post.created_at).toLocaleDateString('ja-JP')}
+                        <span className="ml-2 bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">下書き</span>
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/admin/posts/${post.id}/edit`}>編集</Link>
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        disabled={deleting === post.id}
+                        onClick={() => handleDelete(post.id)}
+                      >
+                        {deleting === post.id ? "削除中..." : "削除"}
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
-} 
+}

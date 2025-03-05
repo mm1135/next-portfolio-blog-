@@ -28,7 +28,7 @@ export default function ActivityHeatmap() {
         
         // 日付ごとの活動数をカウント
         const activityByDate: {[key: string]: number} = {};
-        activities.forEach((activity: any) => {
+        activities.forEach((activity: { created_at: string, activity_type?: string, id?: string | number }) => {
           // タイムゾーンを考慮した日付変換 (JSTに変換)
           const date = new Date(activity.created_at);
           const jstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000)); // UTC+9時間（日本時間）
