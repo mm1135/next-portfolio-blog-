@@ -1,6 +1,5 @@
 import ActivityHeatmap from '@/components/common/ActivityHeatmap';
-import ProfileImage from '@/components/blog/ProfileImage';
-import Image from 'next/image';
+import ProfileImage from '@/components/common/ProfileImage';
 import Link from 'next/link';
 import { Code, Server, Layout, Database, Cpu, Globe, ArrowRight } from 'lucide-react';
 
@@ -16,12 +15,7 @@ export default function AboutPage() {
           <div className="relative md:flex gap-12 items-center max-w-4xl mx-auto">
             <div className="md:w-1/3 mb-8 md:mb-0 flex justify-center">
               <div className="relative w-56 h-56 rounded-full ring-4 ring-white dark:ring-gray-800 overflow-hidden shadow-xl">
-                <Image
-                  src="/profile-image.jpg"
-                  alt="プロフィール画像"
-                  fill
-                  className="object-cover"
-                />
+                <ProfileImage />
               </div>
             </div>
             
