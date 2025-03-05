@@ -17,10 +17,13 @@ export async function POST(request: Request) {
     }
     
     // 1. データベースに保存 - 非同期処理を修正
-    const cookieStore = cookies();
-    const supabase = createServerComponentClient({ cookies: () => cookieStore });
-    
     try {
+      // cookiesを正しく扱う
+      const cookieStore = cookies();
+      const supabase = createServerComponentClient({ 
+        cookies: () => cookieStore 
+      });
+      
       // データベース保存を試みるが、失敗してもメール送信は続行
       const { error: dbError } = await supabase
         .from('contacts')
@@ -40,31 +43,35 @@ export async function POST(request: Request) {
       // DBエラーでも処理は継続
     }
     
-    // 2. メール送信 - Gmail設定の修正
+    // 2. メール送信処理
+    // ユーザーとパスワードを再確認
+    console.log('Using email:', process.env.EMAIL_USER ? 'Set correctly' : 'MISSING');
+    console.log('App password length:', process.env.EMAIL_APP_PASSWORD ? process.env.EMAIL_APP_PASSWORD.length : 'MISSING');
+    
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_APP_PASSWORD, // Gmailのアプリパスワードを使用
-      },
+        pass: process.env.EMAIL_APP_PASSWORD,
+      }
     });
     
-    // SMTP接続のテスト
+    // SMTP接続テスト
     try {
       await transporter.verify();
+      console.log('SMTP接続成功!');
     } catch (verifyError) {
-      console.error('SMTP接続エラー:', verifyError);
-      // エラーをスローする代わりに失敗情報を返す
+      console.error('SMTP接続エラー詳細:', verifyError);
       return NextResponse.json({ 
-        error: 'メールサーバーへの接続に失敗しました',
-        details: '管理者に連絡してください'
+        error: 'メールサーバー接続エラー', 
+        details: '管理者にお問い合わせください' 
       }, { status: 500 });
     }
     
     // メール送信
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER, // 管理者（自分）へのメール
+      to: process.env.EMAIL_USER,
       subject: `[お問い合わせ] ${name}様からのメッセージ`,
       text: `
         名前: ${name}
