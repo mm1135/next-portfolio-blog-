@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getAllPosts, Post, deletePost } from "@/lib/posts";
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/navigation';
+import ActivityHeatmap from '@/components/common/ActivityHeatmap';
 
 export default function AdminPage() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -73,7 +74,12 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto py-12">
+    <div className="container mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">管理画面</h1>
+      
+      {/* アクティビティヒートマップを追加 */}
+      <ActivityHeatmap isAdmin={true} />
+      
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">記事管理</h1>
         <Button asChild>

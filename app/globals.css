@@ -123,4 +123,12 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* ダークモードでのプローズスタイル調整 */
+  .dark .prose {
+    --tw-prose-body: theme('colors.gray.300');
+    --tw-prose-headings: theme('colors.white');
+    --tw-prose-links: theme('colors.indigo.400');
+    --tw-prose-code: theme('colors.gray.300');
+    --tw-prose-quotes: theme('colors.gray.300');
+  }
 }

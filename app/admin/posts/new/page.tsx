@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createPost } from "@/lib/posts";
+import { createPost, recordPostActivity } from "@/lib/posts";
 import { MarkdownRenderer } from "@/components/blog/MarkdownRenderer";
+import { postToQiita } from '@/lib/qiita';
+import { getQiitaCredentialsClient } from '@/lib/supabase-client';
 
 export default function NewPostPage() {
   const router = useRouter();
@@ -18,6 +20,18 @@ export default function NewPostPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [qiitaEnabled, setQiitaEnabled] = useState(false);
+  const [qiitaConnected, setQiitaConnected] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const checkQiitaConnection = async () => {
+      const credentials = await getQiitaCredentialsClient();
+      setQiitaConnected(!!credentials);
+    };
+    
+    checkQiitaConnection();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -32,6 +46,7 @@ export default function NewPostPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError('');
 
     try {
       // タグを配列に変換
@@ -40,7 +55,8 @@ export default function NewPostPage() {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
 
-      const result = await createPost({
+      // ブログに投稿
+      const postResult = await createPost({
         title: formData.title,
         content: formData.content,
         slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-'),
@@ -48,14 +64,39 @@ export default function NewPostPage() {
         published: formData.published
       });
 
-      if (result) {
-        router.push('/admin');
-      } else {
-        alert('記事の作成に失敗しました。');
+      if (!postResult || !postResult.success) {
+        throw new Error('記事の保存に失敗しました');
       }
-    } catch (error) {
-      console.error('エラーが発生しました:', error);
-      alert('記事の作成中にエラーが発生しました。');
+      
+      // 活動記録を保存
+      if (postResult.id) {
+        await recordPostActivity(
+          postResult.id, 
+          formData.published ? 'publish' : 'create'
+        );
+      }
+
+      // Qitaにも投稿する場合
+      if (qiitaEnabled && qiitaConnected) {
+        const qiitaResult = await postToQiita(
+          formData.title,
+          formData.content,
+          tagsArray
+        );
+        
+        if (!qiitaResult.success) {
+          console.error('Qiita投稿エラー:', qiitaResult.error || '不明なエラー');
+          // エラーがあってもブログには投稿できているので続行
+        } else {
+          console.log('Qiitaに投稿成功:', qiitaResult.url);
+          // Qiita URLを保存する処理をここに追加
+        }
+      }
+
+      router.push('/admin');
+    } catch (err) {
+      console.error('投稿エラー:', err);
+      setError('記事の保存中にエラーが発生しました');
     } finally {
       setIsSubmitting(false);
     }
@@ -150,6 +191,31 @@ export default function NewPostPage() {
             />
             <label htmlFor="published">公開する</label>
           </div>
+
+          {/* Qita投稿オプション */}
+          {qiitaConnected && (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="qiitaEnabled"
+                checked={qiitaEnabled}
+                onChange={(e) => setQiitaEnabled(e.target.checked)}
+                className="mr-2"
+              />
+              <label htmlFor="qiitaEnabled">
+                Qitaにも同時投稿する
+              </label>
+            </div>
+          )}
+          
+          {!qiitaConnected && (
+            <div className="text-sm text-gray-500">
+              <Link href="/admin/settings/qiita" className="text-blue-500 hover:underline">
+                Qitaと連携する
+              </Link>
+              と、記事を同時投稿できます
+            </div>
+          )}
 
           <div className="flex justify-end gap-4">
             <Button type="submit" disabled={isSubmitting}>

@@ -3,14 +3,22 @@ import { Button } from "@/components/ui/button";
 import { getPostById } from "@/lib/posts";
 import { notFound } from "next/navigation";
 import { MarkdownRenderer } from "@/components/blog/MarkdownRenderer";
+import { 
+  Card, 
+  CardHeader, 
+  CardContent, 
+  CardFooter 
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, Tag, ArrowLeft, Home } from "lucide-react";
 
 // ページのルートパラメータを受け取る
 export default async function PostPage({ params }: { params: { id: string } }) {
-  // paramsを使用する前に待機する
-  const resolvedParams = await params;
+  // Next.js 14以降では、paramsオブジェクトを使う前にawaitする必要がある
+  const resolvedParams = await Promise.resolve(params);
   const postId = parseInt(resolvedParams.id);
   
-  // Supabaseから記事データを取得
+  // 数値IDで記事を取得
   const post = await getPostById(postId);
   
   // 記事が見つからない場合は404ページを表示
@@ -18,35 +26,59 @@ export default async function PostPage({ params }: { params: { id: string } }) {
     notFound();
   }
   
+  // 簡易的な読了時間の計算
+  const readingTime = Math.ceil(post.content.length / 500);
+  
   return (
-    <div className="container mx-auto py-12">
-      <article className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
-        <p className="text-gray-500 mb-4">
-          {new Date(post.created_at).toLocaleDateString('ja-JP')}
-        </p>
+    <div className="container mx-auto py-12 px-4">
+      <Card className="max-w-4xl mx-auto overflow-hidden shadow-lg">
+        <CardHeader className="border-b bg-muted/20">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CalendarIcon size={14} />
+              <time dateTime={post.created_at}>
+                {new Date(post.created_at).toLocaleDateString('ja-JP')}
+              </time>
+              <span className="px-2">•</span>
+              <div className="flex items-center gap-1">
+                <span>約{readingTime}分で読めます</span>
+              </div>
+            </div>
+            
+            <h1 className="text-3xl md:text-4xl font-bold">{post.title}</h1>
+            
+            <div className="flex flex-wrap gap-2 pt-2">
+              {post.tags && post.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                  <Tag size={12} />
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
         
-        <div className="flex flex-wrap gap-2 mb-8">
-          {post.tags.map((tag) => (
-            <span key={tag} className="text-xs bg-gray-100 px-2 py-1 rounded">
-              {tag}
-            </span>
-          ))}
-        </div>
+        <CardContent className="pt-8 pb-6">
+          <div className="prose-wrapper dark:prose-invert prose-headings:font-bold prose-headings:mt-6 prose-headings:mb-4">
+            <MarkdownRenderer content={post.content} />
+          </div>
+        </CardContent>
         
-        <div className="mt-8 prose-headings:font-bold prose-headings:mt-6 prose-headings:mb-4">
-          <MarkdownRenderer content={post.content} />
-        </div>
-      </article>
-      
-      <div className="mt-12 flex justify-between max-w-4xl mx-auto">
-        <Button asChild variant="outline">
-          <Link href="/posts">記事一覧に戻る</Link>
-        </Button>
-        <Button asChild>
-          <Link href="/">ホームに戻る</Link>
-        </Button>
-      </div>
+        <CardFooter className="border-t py-6 flex justify-between flex-wrap gap-4">
+          <Button asChild variant="outline" className="gap-2">
+            <Link href="/posts">
+              <ArrowLeft size={16} />
+              記事一覧に戻る
+            </Link>
+          </Button>
+          <Button asChild className="gap-2">
+            <Link href="/">
+              <Home size={16} />
+              ホームに戻る
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 } 

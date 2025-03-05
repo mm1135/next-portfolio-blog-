@@ -1,15 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getPostById, updatePost } from "@/lib/posts";
+import { getPostById, updatePost, recordPostActivity } from "@/lib/posts";
 import { MarkdownRenderer } from "@/components/blog/MarkdownRenderer";
 
-export default function EditPostPage({ params }: { params: { id: string } }) {
+interface EditPostPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function EditPostPage({ params }: EditPostPageProps) {
   const router = useRouter();
-  const postId = parseInt(params.id);
+  
+  // React.use()でparamsをアンラップ
+  const unwrappedParams = React.use(params);
+  const postId = parseInt(unwrappedParams.id);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -81,6 +88,12 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
       });
 
       if (result) {
+        // 活動記録を保存
+        await recordPostActivity(
+          postId, 
+          formData.published ? 'publish' : 'edit'
+        );
+        
         router.push('/admin');
       } else {
         setError('記事の更新に失敗しました');

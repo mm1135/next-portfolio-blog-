@@ -13,7 +13,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const customComponents: Partial<Components> = {
     // div要素として直接スタイルを適用
     div: ({ children }) => (
-      <div className="prose prose-stone max-w-none">
+      <div className="prose prose-stone dark:prose-invert max-w-none">
         {children}
       </div>
     ),
@@ -56,7 +56,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   };
 
   return (
-    <div className="markdown-content">
+    <div className="markdown-content prose dark:prose-invert max-w-none">
       <ReactMarkdown 
         remarkPlugins={[remarkGfm]}
         components={customComponents}
