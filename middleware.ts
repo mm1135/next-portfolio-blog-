@@ -4,70 +4,50 @@ import type { NextRequest } from 'next/server';
 
 // この関数はサーバーサイドで実行される
 export async function middleware(request: NextRequest) {
-  console.log('ミドルウェアが実行されました: ', request.nextUrl.pathname);
+  // デバッグ用のログ
+  console.log('ミドルウェア実行パス:', request.nextUrl.pathname);
   
-  // admin以下のパスへのアクセスをチェック（ログインページを除く）
-  if (
-    request.nextUrl.pathname.startsWith('/admin') && 
-    !request.nextUrl.pathname.startsWith('/admin/login')
-  ) {
-    // レスポンスを作成
+  try {
     const res = NextResponse.next();
-    
-    // Supabaseクライアントを初期化
     const supabase = createMiddlewareClient({ req: request, res });
     
-    try {
-      // セッションを取得
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('セッションチェック結果:', !!session);
+    // セッション取得（一度だけ）
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('セッション状態:', !!session);
+    
+    // /admin/* へのアクセス（ただし/admin/loginを除く）
+    if (request.nextUrl.pathname.startsWith('/admin') && 
+        !request.nextUrl.pathname.startsWith('/admin/login')) {
       
-      // セッションがない場合はログインページにリダイレクト
       if (!session) {
-        console.log('セッションなし - ログインページへリダイレクト');
-        const redirectUrl = new URL('/admin/login', request.url);
-        return NextResponse.redirect(redirectUrl);
+        console.log('未認証アクセス - ログインページへリダイレクト');
+        const loginUrl = new URL('/admin/login', request.url);
+        return NextResponse.redirect(loginUrl);
       }
       
-      // セッションがある場合は続行
+      // 認証済みの場合はそのまま続行
       return res;
-    } catch (error) {
-      console.error('認証エラー:', error);
-      // エラー時もログインページにリダイレクト
-      const redirectUrl = new URL('/admin/login', request.url);
-      return NextResponse.redirect(redirectUrl);
     }
-  }
-  
-  // admin/loginへのアクセスで、すでにログインしている場合は管理画面へリダイレクト
-  if (request.nextUrl.pathname.startsWith('/admin/login')) {
-    // レスポンスを作成
-    const res = NextResponse.next();
     
-    // Supabaseクライアントを初期化
-    const supabase = createMiddlewareClient({ req: request, res });
-    
-    try {
-      // セッションを取得
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // セッションがある場合は管理画面にリダイレクト
+    // /admin/login へのアクセス
+    if (request.nextUrl.pathname.startsWith('/admin/login')) {
       if (session) {
-        console.log('すでにログイン済み - 管理画面へリダイレクト');
-        const redirectUrl = new URL('/admin', request.url);
-        return NextResponse.redirect(redirectUrl);
+        console.log('既にログイン済み - 管理画面へリダイレクト');
+        const adminUrl = new URL('/admin', request.url);
+        return NextResponse.redirect(adminUrl);
       }
       
-      // セッションがない場合は続行
-      return res;
-    } catch (error) {
-      // エラー時は通常通り続行
+      // 未認証の場合はそのまま続行
       return res;
     }
+    
+    // 他のパスはそのまま通過
+    return res;
+  } catch (error) {
+    console.error('ミドルウェアエラー:', error);
+    // エラー時は通常どおり続行（リダイレクトしない）
+    return NextResponse.next();
   }
-  
-  // その他のパスは通常通り処理
-  return NextResponse.next();
 }
 
 // ミドルウェアを適用するパスを指定

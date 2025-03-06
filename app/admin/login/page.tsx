@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
@@ -15,32 +15,21 @@ export default function LoginPage() {
   // クライアントコンポーネント用のSupabaseクライアント
   const supabase = createClientComponentClient();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-
+    
     try {
-      console.log("ログイン試行:", email);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // シンプルな認証処理
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       });
       
       if (error) throw error;
       
-      console.log("ログイン成功:", data);
-      
-      // セッションが存在する場合は管理画面に遷移
-      if (data.session) {
-        // Next.jsルーターのrefresh()を呼び出して状態を更新
-        router.refresh();
-        // 管理画面に遷移
-        router.push('/admin');
-      } else {
-        setError('セッションが生成されませんでした。');
-      }
+      // 認証に成功したら手動でリダイレクト
+      window.location.href = '/admin';
     } catch (err: any) {
       console.error('ログインエラー:', err);
       setError(err.message || 'ログインに失敗しました。');
@@ -63,7 +52,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        <form onSubmit={handleLogin} className="mt-8 space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               メールアドレス
